@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ROHIT OS: the operating system that can explain itself</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#eef1f6;--card:#fff;--ink:#14213d;--mute:#5d6b85;--line:#cfd7e6;--acc:#4f46e5;--good:#0f8a5f;--idle:#dfe5f0;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101626;--card:#182036;--ink:#e6ebf7;--mute:#9aa8c7;--line:#2b3658;--acc:#8b86ff;--good:#46d19b;--idle:#222c47}}
+:root[data-theme="dark"]{--bg:#101626;--card:#182036;--ink:#e6ebf7;--mute:#9aa8c7;--line:#2b3658;--acc:#8b86ff;--good:#46d19b;--idle:#222c47}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+.mono,textarea,input,select,td,th.m{font-family:"IBM Plex Mono",ui-monospace,monospace}
+main{max-width:1040px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.05;margin:8px 0 6px;letter-spacing:-.02em}
+h1 span{color:var(--acc)}
+h2{font-size:18px;margin:0 0 10px}
+p.lead{color:var(--mute);max-width:62ch;margin:0 0 18px}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+label{display:flex;flex-direction:column;font-size:13px;color:var(--mute);gap:4px}
+textarea,input,select{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:13px}
+textarea{width:230px;height:112px}
+button{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:8px 14px;font:600 13px "IBM Plex Sans",sans-serif;cursor:pointer}
+button.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.scroll{overflow-x:auto}
+.gantt{position:relative;height:44px;background:var(--idle);border-radius:6px;overflow:hidden;min-width:480px}
+.seg{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font:500 12px "IBM Plex Mono",monospace;border-right:1px solid rgba(255,255,255,.5);overflow:hidden}
+.mask{position:absolute;top:0;right:0;height:100%;background:var(--card);opacity:.78}
+.head{position:absolute;top:0;width:2px;height:100%;background:var(--ink)}
+.axis{position:relative;height:16px;min-width:480px;font:11px "IBM Plex Mono",monospace;color:var(--mute)}
+.axis i{position:absolute;font-style:normal;transform:translateX(-50%)}
+.tm{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+@media(max-width:720px){.tm{grid-template-columns:1fr}}
+.log{height:210px;overflow:auto;border:1px solid var(--line);border-radius:6px;font:12px/1.6 "IBM Plex Mono",monospace}
+.log div{padding:1px 8px;cursor:pointer;white-space:nowrap}
+.log div.on{background:var(--acc);color:#fff}
+.log div.future{opacity:.35}
+.insp{border:1px solid var(--line);border-radius:6px;padding:10px;min-height:210px;font-size:14px}
+.insp b{font-family:"IBM Plex Mono",monospace}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:420px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left}
+td.win{color:var(--good);font-weight:600}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;border:1px solid var(--line);font:12px "IBM Plex Mono",monospace;color:var(--mute)}
+.note{color:var(--mute);font-size:13px;margin:8px 0 0}
+.frames td{text-align:center;min-width:34px}
+.frames td.f{background:var(--acc);color:#fff}
+.frames td.h{color:var(--good)}
+</style>
+</head>
+<body>
+<main>
+<div class="pill">Simulator track · deterministic · every result comes from the engine below</div>
+<h1>ROHIT <span>OS</span></h1>
+<p class="lead">An operating-system laboratory that shows why it made each decision. Run a workload, rewind the event log, then replay the same workload under another policy.</p>
+
+<section>
+<h2>Workload and policies</h2>
+<div class="row">
+<label>Processes (name arrival burst priority)<textarea id="wl" spellcheck="false">P1 0 8 2
+P2 1 2 1
+P3 2 4 3
+P4 3 1 1</textarea></label>
+<label>Run A<select id="pa"></select></label>
+<label>Run B (counterfactual)<select id="pb"></select></label>
+<label>Round Robin quantum<input id="q" type="number" min="1" value="2" style="width:80px"></label>
+<button id="go">Run both</button>
+</div>
+<p class="note">Ties break by arrival time, then process name. SJF and Priority are non-preemptive; a lower priority number runs first. Context switches count dispatches that change the running process.</p>
+<p id="err" class="note" style="color:#d6336c"></p>
+</section>
+
+<section id="tmsec">
+<h2>Kernel Time Machine</h2>
+<div class="row" style="margin-bottom:10px">
+<label>Run shown<select id="which"><option value="0">Run A</option><option value="1">Run B</option></select></label>
+<button id="back" class="alt">Step back</button>
+<button id="play">Play</button>
+<button id="fwd" class="alt">Step forward</button>
+<button id="rst" class="alt">Reset</button>
+<label>Speed<select id="spd"><option value="900">Slow</option><option value="450" selected>Normal</option><option value="150">Fast</option></select></label>
+<span class="pill" id="hash"></span>
+<button id="chk" class="alt">Verify replay</button>
+</div>
+<div class="scroll"><div class="gantt" id="gantt"></div><div class="axis" id="axis"></div></div>
+<div class="tm">
+<div><div class="log" id="log" role="listbox" aria-label="Event log"></div></div>
+<div class="insp" id="insp">Run a workload to begin.</div>
+</div>
+</section>
+
+<section>
+<h2>Policy comparison on identical input</h2>
+<div class="scroll"><table id="cmp"></table></div>
+<p class="note">Waiting = turnaround − burst. Response = first CPU start − arrival. Throughput = jobs per time unit. Fairness is shown as the longest single wait. Winners are marked per row; no policy is best on every measure.</p>
+</section>
+
+<section>
+<h2>Memory Universe</h2>
+<div class="row">
+<label>Page reference string<input id="refs" value="7 0 1 2 0 3 0 4 2 3 0 3 2" style="width:300px"></label>
+<label>Frames<input id="fr" type="number" min="1" max="8" value="3" style="width:70px"></label>
+<label>Policy<select id="mp"><option>FIFO</option><option>LRU</option><option>Optimal</option></select></label>
+</div>
+<p class="note" id="mres"></p>
+<div class="scroll"><table class="frames" id="mt"></table></div>
+<p class="note">Optimal looks ahead and is an offline baseline, not something a real kernel can run.</p>
+</section>
+
+<section>
+<h2>What is not in this page</h2>
+<p class="note" style="margin:0">The deadlock lab, rule-based security audit and QEMU bootable kernel from the blueprint are separate builds. This page covers the core path: workload, scheduler, event log, replay, comparison, and paging.</p>
+</section>
+</main>
+
+<script>
+const POL={fcfs:"FCFS",sjf:"SJF (non-preemptive)",prio:"Priority (non-preemptive)",rr:"Round Robin"};
+const COL=["#4f46e5","#0f8a5f","#c2410c","#0e7490","#a21caf","#b45309","#be123c","#4d7c0f"];
+const $=id=>document.getElementById(id);
+for(const s of [$("pa"),$("pb")])for(const k in POL)s.add(new Option(POL[k],k));
+$("pa").value="fcfs";$("pb").value="rr";
+
+function parse(){
+  const out=[],names=new Set();
+  for(const l of $("wl").value.split("\n")){
+    if(!l.trim())continue;
+    const p=l.trim().split(/\s+/),n=p.slice(1).map(Number);
+    if(p.length<4||n.some(x=>!Number.isFinite(x)||x<0)||n[1]<1)throw new Error("Bad line “"+l+"”: use name, arrival ≥ 0, burst ≥ 1, priority ≥ 0.");
+    if(names.has(p[0]))throw new Error("Duplicate process name "+p[0]+".");
+    names.add(p[0]);out.push({id:p[0],arr:n[0],burst:n[1],pri:n[2]});
+  }
+  if(!out.length)throw new Error("Add at least one process.");
+  return out;
+}
+
+function simulate(procs,pol,q){
+  const P=procs.map(p=>({...p,rem:p.burst,first:null,done:null}));
+  const ev=[],ticks=[];let t=0,ready=[],run=null,qleft=0,last=null,sw=0,busy=0,fin=0;
+  const ev1=(type,pid,why)=>ev.push({t,type,pid,why});
+  while(fin<P.length){
+    for(const p of P.filter(p=>p.arr===t))ready.push(p),ev1("arrive",p.id,p.id+" arrived (burst "+p.burst+", priority "+p.pri+"). Ready queue is now ["+ready.map(r=>r.id).join(", ")+"].");
+    if(run&&pol==="rr"&&qleft===0&&run.rem>0){ev1("preempt",run.id,"Quantum of "+q+" used up with "+run.rem+" left. "+run.id+" goes to the back of the queue.");ready.push(run);run=null}
+    if(!run&&ready.length){
+      let i=0,why="";
+      const key=p=>pol==="sjf"?[p.burst]:pol==="prio"?[p.pri]:[];
+      if(pol==="sjf"||pol==="prio")ready.forEach((p,j)=>{const a=key(p)[0],b=key(ready[i])[0];if(a<b||(a===b&&(p.arr<ready[i].arr||(p.arr===ready[i].arr&&p.id<ready[i].id))))i=j});
+      const c=ready.splice(i,1)[0];run=c;qleft=q;
+      const cands=[c,...ready].map(p=>p.id+":"+(pol==="prio"?"pri "+p.pri:pol==="sjf"?"burst "+p.burst:"arr "+p.arr)).join(", ");
+      why={fcfs:"FCFS picks the earliest arrival.",rr:"Round Robin picks the head of the queue.",sjf:"SJF picks the smallest burst.",prio:"Priority picks the lowest priority number."}[pol]+" Candidates: ["+cands+"].";
+      if(c.first===null)c.first=t;
+      if(last!==c.id)sw++;
+      ev1("dispatch",c.id,why+" Switch from "+(last||"idle")+" to "+c.id+".");
+    }
+    if(!run){
+      if(!P.some(p=>p.arr>t))break;
+      ticks.push("idle");t++;continue;
+    }
+    ticks.push(run.id);run.rem--;qleft--;busy++;last=run.id;t++;
+    if(run.rem===0){run.done=t;fin++;ev1("complete",run.id,run.id+" finished at t="+t+". Turnaround "+(t-run.arr)+", waiting "+(t-run.arr-run.burst)+".");run=null}
+  }
+  const segs=[];ticks.forEach((id,i)=>{const s=segs[segs.length-1];if(s&&s.id===id)s.end=i+1;else segs.push({id,start:i,end:i+1})});
+  const n=P.length,span=ticks.length,w=P.map(p=>p.done-p.arr-p.burst);
+  const m={avgWait:w.reduce((a,b)=>a+b,0)/n,avgTurn:P.reduce((a,p)=>a+p.done-p.arr,0)/n,avgResp:P.reduce((a,p)=>a+p.first-p.arr,0)/n,thr:n/span,util:busy/span*100,sw,maxWait:Math.max(...w)};
+  return{pol,q,ev,segs,span,m,procs:P.map(p=>p.id)};
+}
+function hash(ev){let h=2166136261;for(const c of JSON.stringify(ev)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return(h>>>0).toString(16).padStart(8,"0")}
+
+let runs=[],cur=0,idx=-1,timer=null,procs=[];
+const label=r=>POL[r.pol]+(r.pol==="rr"?" q="+r.q:"");
+
+function go(){
+  $("err").textContent="";stop();
+  try{
+    procs=parse();const q=Math.max(1,parseInt($("q").value)||1);
+    runs=[$("pa").value,$("pb").value].map(p=>simulate(procs,p,q));
+  }catch(e){$("err").textContent=e.message;return}
+  idx=-1;cur=+$("which").value;drawAll();
+}
+function drawAll(){drawCmp();drawTM()}
+function drawCmp(){
+  const [a,b]=runs,rows=[["Average waiting time","avgWait",1],["Average turnaround","avgTurn",1],["Average response time","avgResp",1],["Throughput (jobs per unit)","thr",-1],["CPU utilization (%)","util",-1],["Context switches","sw",1],["Longest wait","maxWait",1]];
+  let h="<tr><th>Measure</th><th>A: "+label(a)+"</th><th>B: "+label(b)+"</th></tr>";
+  for(const[n,k,d]of rows){
+    const x=a.m[k],y=b.m[k],f=v=>Number.isInteger(v)?v:v.toFixed(2),wa=x!==y&&(x-y)*d<0,wb=x!==y&&(x-y)*d>0;
+    h+="<tr><td>"+n+"</td><td class='"+(wa?"win":"")+"'>"+f(x)+"</td><td class='"+(wb?"win":"")+"'>"+f(y)+"</td></tr>";
+  }
+  $("cmp").innerHTML=h;
+}
+function drawTM(){
+  const r=runs[cur];if(!r)return;
+  const pct=v=>(v/r.span*100)+"%";
+  let g="";
+  for(const s of r.segs){const c=s.id==="idle"?"transparent":COL[r.procs.indexOf(s.id)%COL.length];g+="<div class='seg' style='left:"+pct(s.start)+";width:"+pct(s.end-s.start)+";background:"+c+"'>"+(s.id==="idle"?"":s.id)+"</div>"}
+  const now=idx<0?0:r.ev[idx].t;
+  g+="<div class='mask' style='width:"+(100-now/r.span*100)+"%'></div><div class='head' style='left:"+pct(now)+"'></div>";
+  $("gantt").innerHTML=g;
+  let ax="";const step=Math.max(1,Math.ceil(r.span/16));for(let i=0;i<=r.span;i+=step)ax+="<i style='left:"+pct(i)+"'>"+i+"</i>";
+  $("axis").innerHTML=ax;
+  $("log").innerHTML=r.ev.map((e,i)=>"<div data-i='"+i+"' class='"+(i===idx?"on":i>idx?"future":"")+"'>t="+String(e.t).padStart(2," ")+"  "+e.type.padEnd(8," ")+" "+e.pid+"</div>").join("");
+  const on=$("log").querySelector(".on");if(on)on.scrollIntoView({block:"nearest"});
+  $("hash").textContent="event stream "+hash(r.ev);
+  const e=r.ev[idx];
+  $("insp").innerHTML=e?"<b>"+e.type+" · "+e.pid+" · t="+e.t+"</b><p>"+e.why+"</p><p class='note'>Event "+(idx+1)+" of "+r.ev.length+" under "+label(r)+". Click any line in the log to jump there.</p>":"<p>Press Play or Step forward. Each event explains which rule fired and the values it used.</p><p class='note'>"+r.ev.length+" events recorded under "+label(r)+".</p>";
+}
+function stop(){clearInterval(timer);timer=null;$("play").textContent="Play"}
+function step(d){const r=runs[cur];if(!r)return;idx=Math.min(r.ev.length-1,Math.max(-1,idx+d));if(idx===r.ev.length-1)stop();drawTM()}
+$("go").onclick=go;
+$("which").onchange=()=>{cur=+$("which").value;idx=-1;stop();drawTM()};
+$("fwd").onclick=()=>{stop();step(1)};$("back").onclick=()=>{stop();step(-1)};
+$("rst").onclick=()=>{stop();idx=-1;drawTM()};
+$("play").onclick=()=>{
+  if(timer){stop();return}
+  if(!runs[cur])return;
+  if(idx>=runs[cur].ev.length-1)idx=-1;
+  $("play").textContent="Pause";timer=setInterval(()=>step(1),+$("spd").value);
+};
+$("spd").onchange=()=>{if(timer){clearInterval(timer);timer=setInterval(()=>step(1),+$("spd").value)}};
+$("log").onclick=e=>{const d=e.target.closest("div[data-i]");if(d){stop();idx=+d.dataset.i;drawTM()}};
+$("chk").onclick=()=>{
+  const r=runs[cur];if(!r)return;
+  const again=simulate(procs,r.pol,r.q);
+  $("insp").innerHTML="<b>Replay check</b><p>Re-ran the saved workload under "+label(r)+". Hash before: <b>"+hash(r.ev)+"</b>. Hash after: <b>"+hash(again.ev)+"</b>.</p><p>"+(hash(r.ev)===hash(again.ev)?"Identical event stream: the run is deterministic.":"Streams differ: determinism is broken.")+"</p>";
+};
+
+function mem(){
+  const refs=$("refs").value.trim().split(/\s+/).filter(Boolean),F=Math.min(8,Math.max(1,parseInt($("fr").value)||1)),pol=$("mp").value;
+  let fr=[],faults=0,load=[],last={},cols=[];
+  refs.forEach((p,i)=>{
+    const hit=fr.includes(p);let out=null;
+    if(hit){last[p]=i}
+    else{
+      faults++;
+      if(fr.length<F)fr.push(p),load.push(p);
+      else{
+        let v;
+        if(pol==="FIFO"){v=load.shift()}
+        else if(pol==="LRU"){v=fr.reduce((a,b)=>last[a]<last[b]?a:b)}
+        else{const nx=x=>{const j=refs.indexOf(x,i+1);return j<0?1e9:j};v=fr.reduce((a,b)=>nx(a)>=nx(b)?a:b)}
+        if(pol==="FIFO")load.push(p);
+        out=v;fr[fr.indexOf(v)]=p;
+      }
+      last[p]=i;if(pol!=="FIFO"&&!load.includes(p))load.push(p);
+    }
+    cols.push({p,hit,fr:[...fr],out});
+  });
+  let h="<tr><td>Ref</td>"+cols.map(c=>"<td class='"+(c.hit?"h":"")+"'>"+c.p+"</td>").join("")+"</tr>";
+  for(let r=0;r<F;r++)h+="<tr><td>Frame "+(r+1)+"</td>"+cols.map(c=>"<td class='"+(c.fr[r]!==undefined&&!c.hit&&(c.out!==null?c.fr[r]===c.p:c.fr.length-1===r)?"f":"")+"'>"+(c.fr[r]??"")+"</td>").join("")+"</tr>";
+  h+="<tr><td>Result</td>"+cols.map(c=>"<td class='"+(c.hit?"h":"")+"'>"+(c.hit?"hit":"fault")+"</td>").join("")+"</tr>";
+  $("mt").innerHTML=h;
+  $("mres").textContent=pol+": "+faults+" faults in "+refs.length+" references (fault rate "+(faults/refs.length*100).toFixed(1)+"%). Filled cells show the page just loaded.";
+}
+for(const id of ["refs","fr","mp"])$(id).oninput=mem;
+mem();go();
+</script>
+</body>
+</html>
