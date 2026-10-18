@@ -1,7 +1,0 @@
-fastapi>=0.143
-starlette>=1.8
-pydantic>=2.10
-uvicorn>=0.30
-httpx>=0.27
-pytest>=8
-matplotlib>=3.8
