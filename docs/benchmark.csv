@@ -1,0 +1,13 @@
+family,policy,avg_waiting,avg_turnaround,avg_response,max_waiting,context_switches
+cpu_bound,fcfs,40.411,57.806,40.411,81.467,6
+cpu_bound,sjf,32.806,50.2,32.806,75.4,6
+cpu_bound,prio,40.411,57.806,40.411,81.467,6
+cpu_bound,rr,61.589,78.983,6.289,75.767,35.733
+interactive,fcfs,23.243,29.233,23.243,29.3,7
+interactive,sjf,22.343,28.333,22.343,31.367,7
+interactive,prio,23.243,29.233,23.243,29.3,7
+interactive,rr,5.176,11.167,3.471,11.933,9.967
+mixed,fcfs,21.092,28.538,21.092,42.933,8
+mixed,sjf,15.471,22.917,15.471,40.933,8
+mixed,prio,21.75,29.196,21.75,45.8,8
+mixed,rr,28.4,35.846,7.167,41.833,22.567
